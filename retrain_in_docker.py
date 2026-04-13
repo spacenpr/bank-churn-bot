@@ -3,10 +3,17 @@ import joblib
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from catboost import CatBoostClassifier
+import os
 
 print("🔄 Training model on Render...")
 
+# Проверяем, что файл есть
+if not os.path.exists('bank_churn_dataset.csv'):
+    print("❌ bank_churn_dataset.csv not found!")
+    exit(1)
+
 df = pd.read_csv('bank_churn_dataset.csv')
+print(f"✅ Data loaded: {df.shape}")
 
 exclude_cols = ['id', 'full_name', 'address', 'origin_province',
                 'last_active_date', 'created_date', 'exit', 'monthly_ir']
@@ -22,8 +29,16 @@ for col in categorical_cols:
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
-model = CatBoostClassifier(iterations=200, depth=6, learning_rate=0.1, random_seed=42, verbose=False)
+model = CatBoostClassifier(
+    iterations=200,
+    depth=6,
+    learning_rate=0.1,
+    random_seed=42,
+    verbose=False
+)
+
 model.fit(X_train, y_train, eval_set=(X_test, y_test), verbose=False)
 
-joblib.dump(model, 'advanced_ml_reports/best_model_v3.pkl')
-print("✅ Model trained and saved")
+os.makedirs('advanced_ml_reports', exist_ok=True)
+joblib.dump(model, 'advanced_ml_reports/best_model.pkl')
+print("✅ Model saved to advanced_ml_reports/best_model.pkl")
