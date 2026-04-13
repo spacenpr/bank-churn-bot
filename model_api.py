@@ -3,6 +3,7 @@ from pydantic import BaseModel
 import pandas as pd
 import joblib
 import os
+from typing import List
 
 # ================================================================
 # ЗАГРУЗКА МОДЕЛИ
@@ -14,7 +15,7 @@ print(f"🔄 Загрузка модели из: {MODEL_PATH}")
 model = joblib.load(MODEL_PATH)
 print("✅ Модель загружена")
 
-# ТОЧНЫЙ порядок признаков из переобучения
+# ТОЧНЫЙ порядок признаков (должен совпадать с обучением)
 FEATURES = [
     'credit_sco', 'gender', 'age', 'occupation', 'balance',
     'tenure_ye', 'married', 'nums_card', 'nums_service', 'active_member',
@@ -24,7 +25,7 @@ FEATURES = [
 
 
 # ----------------------------------------------------------------
-# МОДЕЛЬ ДАННЫХ
+# МОДЕЛЬ ДАННЫХ ДЛЯ ЗАПРОСА
 # ----------------------------------------------------------------
 class ClientData(BaseModel):
     credit_sco: float
@@ -44,7 +45,7 @@ class ClientData(BaseModel):
     occupation: str
     risk_segment: str
     cluster_group: int
-    last_transaction_month: float = 0  # добавим с значением по умолчанию
+    last_transaction_month: float = 0
 
 
 class PredictionResponse(BaseModel):
@@ -60,28 +61,39 @@ class PredictionResponse(BaseModel):
 def encode_categories(data: dict) -> dict:
     """Преобразует категориальные признаки в числа"""
     data['gender'] = 0 if data['gender'] == 'Male' else 1 if data['gender'] == 'Female' else 2
+
     segment_map = {'Standard': 0, 'Premium': 1, 'Mass': 2, 'Emerging': 3, 'Affluent': 4, 'Priority': 5}
     data['customer_segment'] = segment_map.get(data['customer_segment'], 0)
+
     loyalty_map = {'Bronze': 0, 'Silver': 1, 'Gold': 2, 'Platinum': 3}
     data['loyalty_level'] = loyalty_map.get(data['loyalty_level'], 0)
+
     behavior_map = {'Low': 0, 'Medium': 1, 'High': 2}
     data['digital_behavior'] = behavior_map.get(data['digital_behavior'], 1)
+
     occ_map = {'Professional': 0, 'Manager': 1, 'Student': 2, 'Retired': 3, 'Other': 4}
     data['occupation'] = occ_map.get(data['occupation'], 0)
+
     risk_map = {'Low': 0, 'Medium': 1, 'High': 2}
     data['risk_segment'] = risk_map.get(data['risk_segment'], 1)
+
     return data
 
 
 # ----------------------------------------------------------------
-# API
+# API ЭНДПОИНТЫ
 # ----------------------------------------------------------------
-app = FastAPI(title="Bank Churn Prediction API")
+app = FastAPI(title="Bank Churn Prediction API", version="1.0.0")
 
 
 @app.get("/")
 def root():
     return {"message": "Bank Churn Prediction API", "status": "running"}
+
+
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
 
 
 @app.post("/predict", response_model=PredictionResponse)
@@ -92,7 +104,7 @@ def predict(client: ClientData):
 
         # Создаем DataFrame с правильным порядком колонок
         df = pd.DataFrame([data])
-        df = df[FEATURES]  # Применяем правильный порядок
+        df = df[FEATURES]
 
         # Все значения в float
         for col in df.columns:
@@ -128,7 +140,11 @@ def predict(client: ClientData):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ----------------------------------------------------------------
+# ЗАПУСК (исправлен для Render)
+# ----------------------------------------------------------------
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
