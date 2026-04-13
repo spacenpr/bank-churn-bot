@@ -8,7 +8,7 @@ import os
 # ЗАГРУЗКА МОДЕЛИ
 # ================================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, 'advanced_ml_reports', 'best_model_v2.pkl')
+MODEL_PATH = os.path.join(BASE_DIR, 'advanced_ml_reports', 'best_model.pkl')
 
 print(f"🔄 Загрузка модели из: {MODEL_PATH}")
 model = joblib.load(MODEL_PATH)

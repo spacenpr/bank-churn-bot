@@ -5,12 +5,14 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Скачиваем модель через скрипт
-RUN python -c "import joblib; import pandas as pd; from catboost import CatBoostClassifier; print('Model will be trained on server')"
+# Копируем данные и скрипт обучения
+COPY bank_churn_dataset.csv .
+COPY train_on_server.py .
 
-COPY retrain_in_docker.py .
-RUN python retrain_in_docker.py
+# Обучаем модель (это произойдет во время сборки)
+RUN python train_on_server.py
 
+# Копируем API и бота
 COPY model_api.py .
 COPY telegram_bot_api.py .
 
